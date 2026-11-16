@@ -1,0 +1,43 @@
+# ============================================================
+# Сервис core (Laravel API).
+# Файл остаётся внутри сервиса, чтобы при выносе каталога
+# в отдельный репозиторий правила переехали вместе с кодом.
+# ============================================================
+
+# ---- Зависимости ----
+/vendor
+/node_modules
+
+# ---- Секреты и окружение ----
+.env
+.env.*.local
+.env.testing
+!.env.example
+!.env.testing.example
+
+# ---- Артефакты сборки фронтенда ----
+/public/build
+/public/hot
+/public/storage
+
+# ---- Laravel runtime ----
+/storage/*.key
+/storage/pail
+/storage/logs/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+/storage/app/*
+/bootstrap/cache/*.php
+
+# ---- Тесты и линтеры ----
+.phpunit.result.cache
+.phpunit.cache
+.php-cs-fixer.cache
+
+# ---- IDE / OS ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

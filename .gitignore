@@ -1,0 +1,67 @@
+# ============================================================
+# Корень монорепозитория.
+# Сейчас всё версионируется одним репозиторием. В дальнейшем
+# каждый каталог (infra/, services/core/, contracts/, frontend/)
+# выносится в отдельный репозиторий через
+#   git subtree split --prefix=<dir> <branch>
+# история при этом сохраняется. После выноса каталог
+# добавляется сюда как игнорируемый (см. блок ниже).
+# ============================================================
+
+# ---- Секреты и окружение ----
+.env
+.env.*.local
+/infra/.env
+/services/core/.env
+/services/core/.env.testing
+/frontend/.env
+!**/.env.example
+!**/.env.testing.example
+
+# ---- Артефакты сервисов ----
+/services/core/vendor/
+/services/core/node_modules/
+/services/core/public/build/
+/services/core/public/hot/
+/services/core/public/storage/
+/services/core/storage/*.key
+/services/core/storage/pail/
+/services/core/storage/logs/*
+/services/core/storage/framework/cache/data/*
+/services/core/storage/framework/sessions/*
+/services/core/storage/framework/views/*
+/services/core/storage/framework/testing/*
+/services/core/storage/app/*
+/services/core/bootstrap/cache/*.php
+
+# ---- Артефакты фронтенда ----
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+/frontend/coverage/
+/frontend/*.tsbuildinfo
+
+# ---- Тесты и линтеры ----
+.phpunit.result.cache
+.phpunit.cache
+.php-cs-fixer.cache
+
+# ---- Docker-оверрайды с секретами ----
+/infra/docker-compose.override.yml
+/docker-compose.override.yml
+
+# ---- IDE / OS ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+
+# ============================================================
+# Будущее разделение: раскомментировать после выноса каталога
+# в самостоятельный репозиторий.
+# /infra/
+# /services/core/
+# /contracts/
+# /frontend/
+# ============================================================

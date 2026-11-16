@@ -1,0 +1,87 @@
+# ============================================================
+# Сервис core (Laravel API)
+# Фрагмент подключается в infra/docker-compose.yml через `include:`.
+# Всё, что относится к сервису — образ, воркеры, тома — живёт здесь,
+# чтобы сервис можно было вынести в отдельный репозиторий без правок.
+# ============================================================
+
+x-core: &core
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      PHP_VERSION: "${PHP_VERSION:-8.5}"
+  image: ii/core:dev
+  working_dir: /var/www/core
+  # .env сервиса Laravel читает сам (services/core/.env). Через env_file
+  # не передаём: пустой APP_KEY на старте перекрыл бы файл.
+  environment:
+    PHP_IDE_CONFIG: "serverName=ii-core"
+    COMPOSER_HOME: /composer-cache
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  volumes:
+    - ./:/var/www/core
+    # Генерируемые артефакты — в Linux-томах (bind-mount на Windows медленный)
+    - core-vendor:/var/www/core/vendor
+    - core-node-modules:/var/www/core/node_modules
+    - core-composer-cache:/composer-cache
+  depends_on:
+    pg:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - ii
+  # В dev падение должно быть видно (Exited + логи), а не спрятано рестартом
+  restart: "no"
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  core:
+    <<: *core
+    container_name: ii-core
+    expose:
+      - "9000"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 9000 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # Worker очереди. Профиль `workers`: в базовом стеке не стартует.
+  core-queue:
+    <<: *core
+    profiles: ["workers"]
+    container_name: ii-core-queue
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--backoff=2", "--max-time=3600", "--verbose"]
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
+  # Планировщик задач Laravel.
+  core-scheduler:
+    <<: *core
+    profiles: ["workers"]
+    container_name: ii-core-scheduler
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
+volumes:
+  core-vendor:
+    name: ii-core-vendor
+  core-node-modules:
+    name: ii-core-node-modules
+  core-composer-cache:
+    name: ii-core-composer-cache

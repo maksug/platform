@@ -1,0 +1,19 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+        - database
+        - routes
+
+    # Тесты сознательно не включены: Pest-синтаксис ($this->getJson() внутри
+    # it()) не выводится без pest-plugin-phpstan, а он есть только для Pest 5.
+    # Тесты валидируются собственным прогоном (`.\dev.ps1 test`).
+
+    # Начинаем с 6: ловит основную часть ошибок типов и nullable.
+    # Цель — постепенно поднять до 8 (см. agents.md).
+    level: 6
+
+    # Laravel-магия (фасады, Eloquent) не должна давать шум.
+    checkModelProperties: true

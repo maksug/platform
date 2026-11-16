@@ -1,0 +1,17 @@
+# Build context = services/core
+.git
+.gitignore
+.env
+.env.*.local
+.env.testing
+vendor/
+node_modules/
+public/build
+public/hot
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/*
+.idea/
+.vscode/
