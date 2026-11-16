@@ -1,0 +1,9 @@
+extends:
+  - spectral:oas
+
+rules:
+  info-contact: off
+  info-description: warn
+  operation-description: warn
+  operation-tags: error
+  tag-description: warn
