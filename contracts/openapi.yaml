@@ -10,7 +10,7 @@ info:
     - схема меняется сначала здесь, затем в коде;
     - ломающие изменения — только в новой major-версии;
     - каждое изменение фиксируется в CHANGELOG.md.
-  version: 0.1.0
+  version: 0.2.0
   contact:
     name: II backend team
   license:
@@ -51,9 +51,65 @@ paths:
               schema:
                 type: string
 
-  /api/user:
+  /api/v1/auth/token:
+    post:
+      operationId: issueToken
+      tags:
+        - auth
+      summary: Выдать персональный токен
+      description: |
+        Проверяет email и пароль и возвращает Bearer-токен Sanctum.
+        Неверные учётные данные дают 422 с ошибкой поля `email`,
+        а не 401 — чтобы клиент отличал их от отсутствия токена.
+        Ограничение: 6 попыток в минуту с одного IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '201':
+          description: Токен выдан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          description: Ошибка валидации или неверные учётные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '429':
+          description: Превышен лимит попыток
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: revokeToken
+      tags:
+        - auth
+      summary: Отозвать текущий токен
+      description: Удаляет токен, которым авторизован текущий запрос.
+      security:
+        - sanctum: []
+      responses:
+        '204':
+          description: Токен отозван
+        '401':
+          description: Токен отсутствует или недействителен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/me:
     get:
-      operationId: getCurrentUser
+      operationId: getMe
       tags:
         - auth
       summary: Текущий пользователь
@@ -66,7 +122,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/UserEnvelope'
         '401':
           description: Токен отсутствует или недействителен
           content:
@@ -119,6 +175,53 @@ components:
           format: date-time
       additionalProperties: false
 
+    UserEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+      additionalProperties: false
+
+    TokenRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          format: password
+        device_name:
+          type: string
+          maxLength: 255
+          default: api
+          description: Метка устройства для выданного токена
+      additionalProperties: false
+
+    TokenResponse:
+      type: object
+      required:
+        - token
+        - token_type
+        - user
+      properties:
+        token:
+          type: string
+          description: Персональный токен Sanctum в открытом виде
+        token_type:
+          type: string
+          enum:
+            - Bearer
+        user:
+          $ref: '#/components/schemas/User'
+      additionalProperties: false
+
     Error:
       type: object
       required:
@@ -128,4 +231,22 @@ components:
           type: string
           examples:
             - Unauthenticated.
+      additionalProperties: false
+
+    ValidationError:
+      type: object
+      required:
+        - message
+        - errors
+      properties:
+        message:
+          type: string
+          examples:
+            - The given data was invalid.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
       additionalProperties: false

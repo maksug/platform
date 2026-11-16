@@ -44,6 +44,7 @@ app/
 - `.env` — только Laravel, не коммитится; шаблон `.env.example`.
 - `.env.testing` — тестовая БД `api_test`; шаблон `.env.testing.example`.
 - `DB_*` должны совпадать с `POSTGRES_*` в `infra/.env`; проверка: `.\dev.ps1 env-check`.
+- `FRONTEND_URL` — origin фронтенда для CORS (`config/cors.php`); несколько значений — через запятую.
 - `.env` **не** передаётся через `env_file` в compose — Laravel читает файл сам.
 - Тесты идут на PostgreSQL, а не sqlite: нужна pg-специфика (citext, jsonb, регистр).
 
@@ -81,9 +82,13 @@ app/
 |---|---|---|
 | GET | `/up` | health-check Laravel (200) |
 | GET | `/` | welcome-заглушка (200) |
-| GET | `/api/user` | `auth:sanctum`, без токена → 401 |
+| POST | `/api/v1/auth/token` | выдача Bearer-токена, `throttle:6,1` (201 / 422 / 429) |
+| DELETE | `/api/v1/auth/token` | отзыв текущего токена, `auth:sanctum` (204 / 401) |
+| GET | `/api/v1/me` | текущий пользователь, `auth:sanctum` (200 / 401) |
 
-Плановое изменение: все прикладные маршруты переводятся под `/api/v1`.
+Версия API — в пути. Контракт — `contracts/openapi.yaml`. Ошибки — `{"message": ...}`,
+ошибки валидации — `{"message": ..., "errors": {...}}`. Cookie-сессии не используются:
+только Bearer-токены, поэтому CORS без credentials.
 
 ## 📝 Правила для агентов
 - Все команды — внутри контейнера: `docker compose -f infra/docker-compose.yml exec core ...` или `.\dev.ps1 ...`.

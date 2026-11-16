@@ -128,7 +128,9 @@ git rm -r --cached services/core
 - [x] Монорепо разложено: `infra/` + `services/core/` + `contracts/` + `frontend/`, фрагмент compose на сервис.
 - [x] Все сервисы healthy, связность БД/Redis из контейнера `core` подтверждена.
 - [x] Laravel 13.42 установлен, `install:api` (Sanctum 4), миграции применены.
-- [x] `GET /up` → 200, `GET /api/user` без токена → 401.
+- [x] `GET /up` → 200, `GET /api/v1/me` без токена → 401.
+- [x] API v1: выдача и отзыв токена Sanctum, `/api/v1/me`, CORS через `FRONTEND_URL`.
+- [x] Контракт: `contracts/openapi.yaml` (0.2.0), `.spectral.yaml`, CI-линт.
 - [x] Инструменты качества зелёные: Pest, Larastan level 6, Pint.
 - [x] Git-репозиторий в корне: ветка `main`, коммиты `b784454`, `fb974dc`.
 - [x] `.gitignore` в корне и в сервисе: `.env`, `.env.testing`, `vendor`, `node_modules` не попадают в индекс.
