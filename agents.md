@@ -26,14 +26,61 @@ ii/
 │       ├── Dockerfile        # образ сервиса
 │       ├── compose.yml       # фрагмент: core + core-queue + core-scheduler
 │       ├── docker/           # php.ini, fpm-pool.conf, entrypoint.sh
-│       ├── .env              # ТОЛЬКО Laravel
+│       ├── .gitignore        # секреты и артефакты сервиса
+│       ├── .env              # ТОЛЬКО Laravel (не коммитится)
 │       └── app/ ... tests/
 ├── frontend/                 # резерв под SPA (пока только README)
 ├── contracts/                # OpenAPI/AsyncAPI — общий артефакт
+├── .gitignore                # секреты и артефакты всего монорепо
 ├── dev.ps1                   # обёртки (из корня, compose в infra/)
 └── agents.md
 ```
 Правило: **сервис не импортирует код соседних сервисов**. Тогда `git subtree split --prefix=services/core` даёт готовый репозиторий с историей.
+
+## 🌿 Git-модель: монорепо сейчас, отдельные репозитории потом
+
+- Сейчас **один репозиторий** в корне `ii/`, ветка `main`, первый коммит `chore: initial monorepo import`.
+- Каждый каталог верхнего уровня (`infra/`, `services/core/`, `contracts/`, `frontend/`) проектируется как **самодостаточный**: не импортирует код соседей, держит свои зависимости, конфиги и `.gitignore`.
+- Вложенные `.git` в подкаталогах **не создавать**: они превращают каталог в gitlink и ломают `subtree split`.
+
+### Процедура выноса каталога
+
+```powershell
+# 1. История каталога -> отдельная ветка
+git subtree split --prefix=services/core -b core-standalone
+
+# 2. Отдельный репозиторий и перенос истории
+git init ..\ii-core
+git -C ..\ii-core pull ..\ii core-standalone
+
+# 3. Каталог исключается из монорепо
+git rm -r --cached services/core
+# в корневом .gitignore раскомментировать /services/core/
+```
+
+⚠️ Вынос ломает относительные пути, которые работают сейчас:
+`include: ../services/core/compose.yml` в `infra/docker-compose.yml`, bind-mount nginx
+`../services/core:/var/www/core` и пути `$CoreEnv` в `dev.ps1`.
+Варианты: держать клон на том же месте (`services/core`) либо перевести infra
+на внешние переменные. Решение фиксируется отдельным шагом перед выносом.
+
+### Доступ команд
+
+| Кто | Видит | Не видит |
+|---|---|---|
+| Бэкенд | весь репозиторий | — |
+| Фронтенд | `frontend/`, `contracts/` | `services/core/`, `infra/` |
+| DevOps | весь репозиторий | — |
+
+Пока репозиторий один, изоляция обеспечивается **правилами доступа и ревью**
+(`CODEOWNERS`, защита `main`), а не структурой каталогов. Физическая изоляция
+появляется только после выноса `services/core` в отдельный репозиторий.
+
+### Секреты
+
+- `.env`, `.env.testing` не коммитятся: корневой `.gitignore` + `services/core/.gitignore`.
+- Шаблоны `.env.example`, `.env.testing.example` — коммитятся.
+- Проверка перед коммитом: `git ls-files | findstr /i ".env"` — в выводе только `*.example`.
 
 ## 🐳 Docker-архитектура
 - **`infra/docker-compose.yml`** — платформа: nginx, pg, redis, mailpit, adminer. Сервисы подключаются через `include: ../services/core/compose.yml`
@@ -52,6 +99,7 @@ ii/
 - Типы API — из `contracts/openapi.yaml`, не руками
 - Порт `5173` (`VITE_PORT`) зарезервирован в `infra/.env`
 - Папка самодостаточна: `git subtree split --prefix=frontend` → отдельный репозиторий
+- **Доступ**: фронтенд-команда не получает `services/core/` и `infra/`. Пока это монорепо — изоляция через правила ревью; после выноса `frontend/` в свой репозиторий — физическая
 
 ## 🧪 Тесты и качество кода
 - **Pest 4.7** — тесты в `tests/`, `RefreshDatabase` включён для `Feature`
@@ -107,6 +155,8 @@ ii/
 - [x] Инструменты качества: Pest 4.7, Larastan 3.15 (level 6), Pint 1.32; `composer qa` зелёный
 - [x] Тесты на PostgreSQL (`api_test`): 4 теста, 7 утверждений
 - [x] `dev.ps1` настроен и работает на PowerShell
+- [x] Git-репозиторий в корне: ветка `main`, первый коммит `b784454`
+- [x] `.gitignore` в корне и в сервисе: `.env`, `.env.testing`, `vendor`, `node_modules` не попадают в индекс
 
 ## 🗺 Маршруты и эндпоинты
 | Метод | URI | Статус |
@@ -116,10 +166,11 @@ ii/
 | GET | `/api/user` | `auth:sanctum`, без токена → 401 |
 
 ## ⏳ Следующие шаги
-1. Раскладка архитектуры внутри сервиса: слои, базовые классы, договорённости об именовании
-2. Инфраструктурные срезы: очереди, кэш, почта, хранилище файлов
-3. Первый вертикальный срез (миграция → модель → FormRequest → Service → Controller → маршрут → тесты)
-4. CI (GitHub Actions) и финальная документация
+1. Контракт: `contracts/openapi.yaml`, экспорт схемы из Laravel, проверка расхождений в CI, semver и changelog
+2. CORS, версионирование `/api/v1`, auth-эндпоинты для фронтенда
+3. Фронтовый контур: `frontend/compose.yml`, прокси на API, MSW-моки по контракту
+4. CODEOWNERS и защита `main`; remote и первый push
+5. Вынос каталогов в отдельные репозитории через `git subtree split` с правкой относительных путей в `infra/`
 
 ## 📝 Примечания для агентов
 - Не использовать `make` — среда Windows, все обёртки в `dev.ps1`
@@ -127,3 +178,7 @@ ii/
 - `.env` не должен коммититься; шаблоны — `infra/.env.example`, `services/core/.env.example`
 - Для отладки Xdebug: `XDEBUG_MODE=develop` в `infra/.env`, затем `.\dev.ps1 up`
 - Тонкие места: смена имён БД/пользователей после первого запуска, команда `clean` безвозвратно удаляет тома, рассинхрон двух env-файлов
+- Git: ветка `main`, репозиторий один (монорепо). Вложенные `.git` в подкаталогах не создавать — это ломает `git subtree split`
+- Перед коммитом проверять индекс: `git ls-files | findstr /i ".env"` — только `*.example`
+- `.env` и `.env.testing` не коммитятся никогда; шаблоны — `.env.example`, `.env.testing.example`
+- При правке `infra/` помнить: пути `../services/core` станут проблемой при выносе сервиса в отдельный репозиторий
