@@ -53,6 +53,7 @@ app/
 - Larastan level 6, пути `app/ database/ routes/`; тесты в анализ не входят (Pest-плагин есть только для Pest 5).
 - Pint preset `laravel`, конфиг `pint.json`.
 - Полный прогон: `.\dev.ps1 qa` или `composer qa` (lint + stan + test).
+- **Контракт**: `composer openapi` (или `.\dev.ps1 openapi`) экспортирует схему в `storage/app/openapi.json` и обновляет снимок `contracts/generated/openapi.json`. Расхождение с `contracts/openapi.yaml` ловит CI.
 
 ## 🐳 Docker и образ
 - `Dockerfile`: `php:8.5-fpm-alpine` + `pdo_pgsql`, `bcmath`, `exif`, `pcntl`, `zip`, `intl`, `redis`, `xdebug`.

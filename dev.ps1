@@ -78,6 +78,7 @@ Dev commands:
   lint              Проверка стиля без изменений (pint --test)
   pint              Автоисправление стиля (pint)
   stan              Статический анализ (phpstan, level 6)
+  openapi           Экспорт OpenAPI из Laravel в contracts/generated/openapi.json
   qa                Полный цикл: lint + stan + test
   env-check         Сверить DB_* в infra/.env и services/core/.env
   migrate           php artisan migrate
@@ -100,6 +101,15 @@ Dev commands:
     "lint"    { Invoke-Compose @("exec", "core", "./vendor/bin/pint", "--test") }
     "pint"    { Invoke-Compose (@("exec", "core", "./vendor/bin/pint") + $Rest) }
     "stan"    { Invoke-Compose (@("exec", "core", "./vendor/bin/phpstan", "analyse", "--no-progress") + $Rest) }
+    "openapi" {
+        Invoke-Compose @("exec", "core", "composer", "openapi")
+        $generated = Join-Path $Root "services\core\storage\app\openapi.json"
+        $targetDir = Join-Path $Root "contracts\generated"
+        $target    = Join-Path $targetDir "openapi.json"
+        if (-not (Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir | Out-Null }
+        Copy-Item $generated $target -Force
+        Write-Host "OK: $target" -ForegroundColor Green
+    }
     "qa"      { Invoke-Compose @("exec", "core", "composer", "qa") }
     "env-check" { Test-EnvSync }
     "migrate" { Invoke-Compose (@("exec", "core", "php", "artisan", "migrate") + $Rest) }

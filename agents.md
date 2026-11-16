@@ -131,17 +131,17 @@ git rm -r --cached services/core
 - [x] `GET /up` → 200, `GET /api/v1/me` без токена → 401.
 - [x] API v1: выдача и отзыв токена Sanctum, `/api/v1/me`, CORS через `FRONTEND_URL`.
 - [x] Контракт: `contracts/openapi.yaml` (0.2.0), `.spectral.yaml`, CI-линт.
+- [x] Экспорт OpenAPI из Laravel (Scramble), снимок `contracts/generated/openapi.json`, CI-сверка расхождений.
 - [x] Инструменты качества зелёные: Pest, Larastan level 6, Pint.
 - [x] Git-репозиторий в корне: ветка `main`, коммиты `b784454`, `fb974dc`.
 - [x] `.gitignore` в корне и в сервисе: `.env`, `.env.testing`, `vendor`, `node_modules` не попадают в индекс.
 - [x] Правила для агентов разнесены по уровням: корень, `services/core/agents.md`, `frontend/agents.md`.
 
 ## ⏳ Следующие шаги
-1. Контракт: `contracts/openapi.yaml`, экспорт схемы из Laravel, проверка расхождений в CI, semver и changelog.
-2. CORS, версионирование `/api/v1`, auth-эндпоинты для фронтенда.
-3. Фронтовый контур: `frontend/compose.yml`, прокси на API, MSW-моки по контракту.
-4. CODEOWNERS и защита `main`; remote и первый push.
-5. Вынос каталогов в отдельные репозитории через `git subtree split` с правкой относительных путей в `infra/`.
+1. Фронтовый контур: `frontend/compose.yml`, прокси на API, MSW-моки по контракту.
+2. CODEOWNERS и защита `main`; remote и первый push.
+3. Вынос каталогов в отдельные репозитории через `git subtree split` с правкой относительных путей в `infra/`.
+4. AsyncAPI для событий, когда появятся очереди и брокер.
 
 ## 📝 Примечания для агентов
 - Не использовать `make` — среда Windows, все обёртки в `dev.ps1`.

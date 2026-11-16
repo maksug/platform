@@ -3,6 +3,13 @@
 Все заметные изменения контракта API. Формат — [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
 версионирование — [SemVer](https://semver.org/lang/ru/).
 
+## [Unreleased]
+
+### Инструментарий
+- Экспорт OpenAPI из Laravel (Scramble) в `contracts/generated/openapi.json`.
+- CI-проверка расхождений: снимок против кода и покрытие эндпоинтов контрактом.
+- Команда `.\dev.ps1 openapi` для перегенерации снимка.
+
 ## [0.2.0] — 2026-11-16
 
 ### Добавлено

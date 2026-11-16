@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - 'contracts/**'
+      - 'services/core/**'
+      - 'scripts/check-openapi-drift.php'
       - '.github/workflows/contracts.yml'
   pull_request:
     paths:
       - 'contracts/**'
+      - 'services/core/**'
+      - 'scripts/check-openapi-drift.php'
       - '.github/workflows/contracts.yml'
 
 permissions:
@@ -28,3 +32,42 @@ jobs:
 
       - name: Spectral lint
         run: npx --yes @stoplight/spectral-cli@6 lint contracts/openapi.yaml
+
+  drift:
+    name: Schema drift
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      APP_URL: http://localhost:8000
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install dependencies
+        working-directory: services/core
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Export OpenAPI from Laravel
+        working-directory: services/core
+        run: php artisan scramble:export --path=storage/app/openapi.json
+
+      - name: Update snapshot
+        run: cp services/core/storage/app/openapi.json contracts/generated/openapi.json
+
+      - name: Snapshot is committed
+        run: git diff --exit-code contracts/generated/openapi.json
+
+      - name: Endpoints are covered by contract
+        run: php scripts/check-openapi-drift.php
