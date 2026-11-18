@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "ii/api",
+    "name": "foundation/api",
     "type": "project",
-    "description": "II API — Laravel 13 REST API",
+    "description": "Foundation API — Laravel 13 REST API",
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {

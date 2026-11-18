@@ -1,4 +1,4 @@
-# II Core API — правила для агентов
+# Foundation Core API — правила для агентов
 
 Laravel-сервис, отдающий REST API. Каталог самодостаточен: после
 `git subtree split --prefix=services/core` он становится отдельным репозиторием,
@@ -7,12 +7,34 @@ Laravel-сервис, отдающий REST API. Каталог самодост
 ## 📦 Стек и версии
 - **Framework**: Laravel 13.42 (API-only, `install:api`)
 - **Auth**: Laravel Sanctum 4 (Bearer-токены)
-- **PHP**: 8.5 (FPM, Alpine), образ `ii/core:dev`
+- **PHP**: 8.5 (FPM, Alpine), образ `foundation/core:dev`
 - **БД**: PostgreSQL 18 (Alpine)
 - **Кэш/Очереди**: Redis 8 (Alpine)
 - **Тесты**: Pest 4.7 (поверх PHPUnit 12), `RefreshDatabase`, БД `api_test`
 - **Качество кода**: Larastan 3.15 (level 6), Pint 1.32 (preset `laravel`)
-- **Архитектура**: классический Laravel (Controllers / Models / Services / Actions)
+
+## 🏛 Архитектура: монолит со слоем Services
+
+**Не модульный монолит, не микросервисы** — классический Laravel с чётким разделением:
+
+| Слой | Путь | Назначение |
+|---|---|---|
+| HTTP | `app/Http/Controllers/Api/V1/` | Тонкий адаптер: FormRequest → Action → Resource |
+| Request | `app/Http/Requests/` | Валидация через FormRequest |
+| Resource | `app/Http/Resources/` | Сериализация ответа |
+| Action | `app/Actions/` | Оркестратор сценария: вызывает сервисы, возвращает DTO |
+| Service | `app/Services/` | Бизнес-правила: проверка кредов, генерация токенов |
+| Data | `app/Data/` | DTO (типизированные данные между слоями) |
+| Exception | `app/Exceptions/` | Доменные исключения |
+| Model | `app/Models/` | Eloquent, без бизнес-логики |
+| Support | `app/Support/` | Базовые классы, хелперы |
+
+**Правила:**
+- Action ≠ Service. Action — сценарий (LoginAction), Service — переиспользуемое правило (TokenService).
+- Контроллер не содержит бизнес-логики, не знает про `Hash::check()`.
+- Сервисы возвращают DTO, не массивы.
+- Доменные исключения конвертируются в HTTP-ответ через `bootstrap/app.php`.
+- API-версия в пути: `/api/v1/...`.
 
 ## 🧱 Границы сервиса
 - Сервис **не импортирует** код соседних сервисов и **не правит** `infra/` и `contracts/`.
@@ -23,22 +45,52 @@ Laravel-сервис, отдающий REST API. Каталог самодост
 ## 🗂 Внутренняя структура
 ```
 app/
-├── Actions/          # один сценарий — один класс
+├── Actions/              # оркестраторы сценариев
+│   └── Auth/
+│       ├── LoginAction.php    # вызывает TokenService->issue()
+│       └── LogoutAction.php   # вызывает TokenService->revoke()
+├── Data/                 # DTO
+│   └── IssuedTokenData.php
+├── Exceptions/           # доменные исключения
+│   └── InvalidCredentialsException.php
 ├── Http/
 │   ├── Controllers/
-│   ├── Requests/     # валидация через FormRequest
-│   ├── Resources/    # сериализация ответа
-│   └── Middleware/
+│   │   └── Api/V1/
+│   │       ├── AuthTokenController.php  # POST/DELETE /api/v1/auth/token
+│   │       └── MeController.php         # GET /api/v1/me
+│   ├── Middleware/
+│   ├── Requests/
+│   │   └── Auth/
+│   │       └── IssueTokenRequest.php
+│   └── Resources/
+│       └── UserResource.php
 ├── Models/
-├── Services/
+│   └── User.php
 ├── Providers/
+├── Services/             # бизнес-правила
+│   └── Auth/
+│       └── TokenService.php   # issue(), revoke()
 └── Support/
+    └── Actions/
+        └── Action.php         # базовый класс
 ```
 
-- Контроллер: FormRequest → Service/Action → Resource. Бизнес-логика в контроллере не живёт.
-- Модели без бизнес-логики; сложные выборки — через скоупы.
-- Именование: `StoreUserRequest`, `UserResource`, `CreateUserAction`, `BillingService`.
-- Тесты повторяют структуру: `tests/Feature/Api/...`, `tests/Unit/...`.
+**Цепочка запроса:**
+```
+POST /api/v1/auth/token
+  → AuthTokenController::store()
+    → IssueTokenRequest (валидация)
+    → LoginAction::handle()
+      → TokenService::issue()
+        → Hash::check() → InvalidCredentialsException
+        → $user->createToken()
+      → IssuedTokenData (DTO)
+    → UserResource (сериализация)
+  → 201 {token, token_type, user}
+```
+
+- Тесты повторяют структуру: `tests/Feature/Api/` (HTTP), `tests/Feature/Services/` (бизнес-логика).
+- `tests/Unit/` — для чистых классов без Laravel-контекста (ValueObjects, Enums).
 
 ## ⚙️ Окружение
 - `.env` — только Laravel, не коммитится; шаблон `.env.example`.

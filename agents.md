@@ -1,4 +1,8 @@
-# II — рабочее пространство (монорепозиторий)
+# Foundation — рабочее пространство (монорепозиторий)
+
+Репозиторий — **фундамент** для будущих проектов: конкретные продуктовые
+домены ещё не выбраны, поэтому название не привязано к стеку и предметной
+области. Каждый проект вырастает отсюда (копия или `git subtree split`).
 
 Файл описывает **рабочее пространство**: раскладку каталогов, git-модель,
 границы доступа команд и платформу. Правила конкретных сервисов живут рядом с кодом.
@@ -16,7 +20,7 @@
 
 ## 🗂 Структура монорепо
 ```
-ii/
+foundation/
 ├── infra/                    # Платформа: сеть, данные, HTTP, dev-инструменты
 │   ├── docker-compose.yml    # собирает сервисы через `include:`
 │   ├── .env                  # ТОЛЬКО compose (порты, POSTGRES_*)
@@ -44,7 +48,7 @@ ii/
 
 ## 🌿 Git-модель: монорепо сейчас, отдельные репозитории потом
 
-- Сейчас **один репозиторий** в корне `ii/`, ветка `main`, первый коммит `chore: initial monorepo import`.
+- Сейчас **один репозиторий** в корне `foundation/`, ветка `main`, первый коммит `chore: initial monorepo import`.
 - Каждый каталог верхнего уровня (`infra/`, `services/core/`, `contracts/`, `frontend/`) проектируется как **самодостаточный**: не импортирует код соседей, держит свои зависимости, конфиги, `.gitignore` и `agents.md`.
 - Вложенные `.git` в подкаталогах **не создавать**: они превращают каталог в gitlink и ломают `subtree split`.
 
@@ -55,8 +59,8 @@ ii/
 git subtree split --prefix=services/core -b core-standalone
 
 # 2. Отдельный репозиторий и перенос истории
-git init ..\ii-core
-git -C ..\ii-core pull ..\ii core-standalone
+git init ..\foundation-core
+git -C ..\foundation-core pull ..\foundation core-standalone
 
 # 3. Каталог исключается из монорепо
 git rm -r --cached services/core
@@ -91,7 +95,7 @@ git rm -r --cached services/core
 
 - **`infra/docker-compose.yml`** — nginx, pg, redis, mailpit, adminer. Сервисы подключаются фрагментами через `include: ../services/core/compose.yml`.
 - **Связь**: `nginx` → `core` (php-fpm:9000) → БД/Redis; порядок старта через healthcheck-цепочки.
-- **Порты и тома платформы**: `pgdata` (`ii-pgdata`), `redisdata` (`ii-redisdata`); производные тома сервиса (`ii-core-vendor`, `ii-core-node-modules`, `ii-core-composer-cache`) можно удалять без боли.
+- **Порты и тома платформы**: `pgdata` (`foundation-pgdata`), `redisdata` (`foundation-redisdata`); производные тома сервиса (`foundation-core-vendor`, `foundation-core-node-modules`, `foundation-core-composer-cache`) можно удалять без боли.
 - **Логи**: rotation 10 МБ × 3 файла на сервис.
 - **Рестарт**: приложение — `restart: "no"` (падение видно сразу), инфраструктура (pg/redis/nginx) — `unless-stopped`.
 - **Конфигурация — два файла, не один**: `infra/.env` (compose) и `services/core/.env` (Laravel). Проверка совпадения `DB_*`: `.\dev.ps1 env-check`.
@@ -118,8 +122,8 @@ git rm -r --cached services/core
 ⚠️ На машине пользователя стоит **нативный PostgreSQL 17** на порту 5432 (`C:\Program Files\PostgreSQL\17`) — конфликтовать с ним нельзя, контейнерная БД специально на 5433. Внутри docker-сети Laravel ходит на `pg:5432` как обычно.
 
 ## 💾 Хранение и сброс данных
-- `ii-pgdata` (PG), `ii-redisdata` (Redis) — **named volumes** Docker.
-- `ii-core-vendor`, `ii-core-node-modules`, `ii-core-composer-cache` — производные артефакты.
+- `foundation-pgdata` (PG), `foundation-redisdata` (Redis) — **named volumes** Docker.
+- `foundation-core-vendor`, `foundation-core-node-modules`, `foundation-core-composer-cache` — производные артефакты.
 - Переживают `restart`, `rm`, `up`, `build`, `down` (без `-v`).
 - **Полный сброс**: только `.\dev.ps1 clean` (выполняет `down -v`) или ручное `docker volume rm`.
 - ⚠️ **Ловушка**: изменение `POSTGRES_DB`/`POSTGRES_USER` в `infra/.env` после первой инициализации **не переключит** БД автоматически. Том уже содержит старый кластер. Требуется `clean` или ручное `DROP DATABASE` / `CREATE DATABASE`.
@@ -128,6 +132,7 @@ git rm -r --cached services/core
 - [x] Монорепо разложено: `infra/` + `services/core/` + `contracts/` + `frontend/`, фрагмент compose на сервис.
 - [x] Все сервисы healthy, связность БД/Redis из контейнера `core` подтверждена.
 - [x] Laravel 13.42 установлен, `install:api` (Sanctum 4), миграции применены.
+- [x] Архитектура: монолит со слоем Services (Controllers → Actions → Services → Models).
 - [x] `GET /up` → 200, `GET /api/v1/me` без токена → 401.
 - [x] API v1: выдача и отзыв токена Sanctum, `/api/v1/me`, CORS через `FRONTEND_URL`.
 - [x] Контракт: `contracts/openapi.yaml` (0.2.0), `.spectral.yaml`, CI-линт.

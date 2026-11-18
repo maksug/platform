@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\InvalidCredentialsException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,4 +20,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Доменные исключения -> HTTP-ответ. Инкапсуляция: сервисы бросают
+        // предметные ошибки, а не PrepareMessage; транспорт решает код.
+        $exceptions->render(function (InvalidCredentialsException $e, Request $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => ['email' => [$e->getMessage()]],
+            ], 422);
+        });
     })->create();

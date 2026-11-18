@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Actions\Auth\IssueTokenAction;
+use App\Actions\Auth\LoginAction;
+use App\Actions\Auth\LogoutAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\IssueTokenRequest;
 use App\Http\Resources\UserResource;
@@ -13,30 +14,33 @@ use Illuminate\Http\Response;
 
 class AuthTokenController extends Controller
 {
-    public function store(IssueTokenRequest $request, IssueTokenAction $action): JsonResponse
+    /**
+     * POST /api/v1/auth/token
+     */
+    public function store(IssueTokenRequest $request, LoginAction $action): JsonResponse
     {
         $result = $action->handle(
             email: $request->string('email')->toString(),
             password: $request->string('password')->toString(),
-            deviceName: $request->string('device_name', 'api')->toString(),
+            device_name: $request->string('device_name', 'api')->toString(),
         );
 
         return response()->json([
-            'token' => $result['token'],
+            'token' => $result->token,
             'token_type' => 'Bearer',
-            'user' => new UserResource($result['user']),
+            'user' => new UserResource($result->user),
         ], 201);
     }
 
-    public function destroy(Request $request): Response
+    /**
+     * DELETE /api/v1/auth/token
+     */
+    public function destroy(Request $request, LogoutAction $action): Response
     {
+        /** @var User $user */
         $user = $request->user();
 
-        if ($user instanceof User) {
-            // Cookie-сессии не используются: авторизация только по Bearer-токену,
-            // поэтому currentAccessToken() — это PersonalAccessToken.
-            $user->currentAccessToken()->delete();
-        }
+        $action->handle(user: $user);
 
         return response()->noContent();
     }

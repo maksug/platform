@@ -11,12 +11,12 @@ x-core: &core
     dockerfile: Dockerfile
     args:
       PHP_VERSION: "${PHP_VERSION:-8.5}"
-  image: ii/core:dev
+  image: foundation/core:dev
   working_dir: /var/www/core
   # .env сервиса Laravel читает сам (services/core/.env). Через env_file
   # не передаём: пустой APP_KEY на старте перекрыл бы файл.
   environment:
-    PHP_IDE_CONFIG: "serverName=ii-core"
+    PHP_IDE_CONFIG: "serverName=foundation-core"
     COMPOSER_HOME: /composer-cache
   extra_hosts:
     - "host.docker.internal:host-gateway"
@@ -32,7 +32,7 @@ x-core: &core
     redis:
       condition: service_healthy
   networks:
-    - ii
+    - foundation
   # В dev падение должно быть видно (Exited + логи), а не спрятано рестартом
   restart: "no"
   logging:
@@ -44,7 +44,7 @@ x-core: &core
 services:
   core:
     <<: *core
-    container_name: ii-core
+    container_name: foundation-core
     expose:
       - "9000"
     healthcheck:
@@ -58,7 +58,7 @@ services:
   core-queue:
     <<: *core
     profiles: ["workers"]
-    container_name: ii-core-queue
+    container_name: foundation-core-queue
     command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--backoff=2", "--max-time=3600", "--verbose"]
     depends_on:
       core:
@@ -70,7 +70,7 @@ services:
   core-scheduler:
     <<: *core
     profiles: ["workers"]
-    container_name: ii-core-scheduler
+    container_name: foundation-core-scheduler
     command: ["php", "artisan", "schedule:work"]
     depends_on:
       core:
@@ -80,8 +80,8 @@ services:
 
 volumes:
   core-vendor:
-    name: ii-core-vendor
+    name: foundation-core-vendor
   core-node-modules:
-    name: ii-core-node-modules
+    name: foundation-core-node-modules
   core-composer-cache:
-    name: ii-core-composer-cache
+    name: foundation-core-composer-cache

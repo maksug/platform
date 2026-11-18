@@ -1,4 +1,5 @@
-# II Web — правила для агентов
+# Foundation Web — правила для агентов
+
 
 SPA-клиент к API `services/core`. Папка самодостаточна: после
 `git subtree split --prefix=frontend` она становится отдельным репозиторием,

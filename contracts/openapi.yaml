@@ -1,7 +1,7 @@
 openapi: 3.1.0
 
 info:
-  title: II API
+  title: Foundation API
   summary: REST API сервиса core
   description: |
     Контракт HTTP API — источник истины для фронтенда и других сервисов.
@@ -12,7 +12,7 @@ info:
     - каждое изменение фиксируется в CHANGELOG.md.
   version: 0.2.0
   contact:
-    name: II backend team
+    name: Foundation backend team
   license:
     name: MIT
     identifier: MIT

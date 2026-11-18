@@ -1,4 +1,4 @@
-name: ii
+name: foundation
 
 # ============================================================
 # Платформа: сеть, данные, HTTP-фасад, dev-инструменты.
@@ -19,7 +19,7 @@ services:
   # HTTP-фасад. Корень указывает на public/ сервиса core.
   nginx:
     image: nginx:1.29-alpine
-    container_name: ii-nginx
+    container_name: foundation-nginx
     ports:
       # API публикуем на всех интерфейсах: нужен доступ из сети (телефон)
       - "${APP_PORT:-8000}:80"
@@ -30,7 +30,7 @@ services:
       core:
         condition: service_healthy
     networks:
-      - ii
+      - foundation
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'nginx: master' > /dev/null"]
@@ -42,7 +42,7 @@ services:
 
   pg:
     image: postgres:18-alpine
-    container_name: ii-pg
+    container_name: foundation-pg
     environment:
       POSTGRES_DB: "${POSTGRES_DB:-api}"
       POSTGRES_USER: "${POSTGRES_USER:-api}"
@@ -60,13 +60,13 @@ services:
       timeout: 5s
       retries: 12
     networks:
-      - ii
+      - foundation
     restart: unless-stopped
     logging: *logging
 
   redis:
     image: redis:8-alpine
-    container_name: ii-redis
+    container_name: foundation-redis
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     # Порт не публикуем: в dev хватает `docker compose exec redis redis-cli`
     volumes:
@@ -78,25 +78,25 @@ services:
       timeout: 5s
       retries: 12
     networks:
-      - ii
+      - foundation
     restart: unless-stopped
     logging: *logging
 
   # Перехватчик писем: SMTP 1025 внутри сети, UI на хосте
   mailpit:
     image: axllent/mailpit:latest
-    container_name: ii-mailpit
+    container_name: foundation-mailpit
     ports:
       - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
     networks:
-      - ii
+      - foundation
     restart: unless-stopped
     logging: *logging
 
   # Веб-клиент к PostgreSQL
   adminer:
     image: adminer:latest
-    container_name: ii-adminer
+    container_name: foundation-adminer
     environment:
       ADMINER_DEFAULT_SERVER: pg
       ADMINER_DESIGN: pepa-linha
@@ -105,16 +105,16 @@ services:
     depends_on:
       - pg
     networks:
-      - ii
+      - foundation
     restart: unless-stopped
     logging: *logging
 
 volumes:
   pgdata:
-    name: ii-pgdata
+    name: foundation-pgdata
   redisdata:
-    name: ii-redisdata
+    name: foundation-redisdata
 
 networks:
-  ii:
-    name: ii
+  foundation:
+    name: foundation
