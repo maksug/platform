@@ -57,18 +57,28 @@ npx --yes @stoplight/spectral-cli@6 lint contracts/openapi.yaml
 ```
 
 Команда запускает `composer openapi` в контейнере (`artisan scramble:export`)
-и кладёт результат в `contracts/generated/openapi.json`. Снимок коммитится.
+и кладёт результат в `contracts/generated/openapi.json`.
 
-CI-job `drift` в `.github/workflows/contracts.yml` заново экспортирует схему и падает, если:
+### CI-прогон
 
-- снимок в репозитории не совпадает с кодом (`git diff --exit-code`);
-- в коде появился эндпоинт, которого нет в `openapi.yaml`.
+Job `drift` в `.github/workflows/contracts.yml` выполняет:
+
+1. Перегенерирует схему из Laravel (`scramble:export`).
+2. Обновляет снимок `contracts/generated/openapi.json` в рабочем каталоге.
+3. Публикует актуальную схему как артефакт прогона `openapi-generated`.
+4. Сверяет эндпоинты кода с ручным контрактом (`openapi.yaml`) через
+   `scripts/check-openapi-drift.php` — падает, если в коде появился эндпоинт,
+   которого нет в контракте.
 
 Эндпоинты, описанные в контракте, но отсутствующие в коде, выводятся
 предупреждением — контракт может опережать реализацию.
 
 Сверка выполняется скриптом `scripts/check-openapi-drift.php`; для разбора YAML
 в dev-зависимостях сервиса стоит `symfony/yaml`.
+
+> Снимок `contracts/generated/openapi.json` хранится в репозитории для
+> справки и может обновляться локально через `.\dev.ps1 openapi`.
+> В CI всегда публикуется актуальная версия как артефакт.
 
 ## Будущее разделение
 

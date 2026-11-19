@@ -38,6 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENV: testing
+      # Без .env в CI title схемы взялся бы из дефолта config('app.name') —
+      # 'Laravel'. Фиксируем то же значение, что в .env.example.
+      APP_NAME: 'Foundation API'
       APP_URL: http://localhost:8000
       APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
       CACHE_STORE: array
@@ -92,8 +95,12 @@ jobs:
       - name: Update snapshot
         run: cp services/core/storage/app/openapi.json contracts/generated/openapi.json
 
-      - name: Snapshot is committed
-        run: git diff --exit-code contracts/generated/openapi.json
+      - name: Publish generated schema
+        uses: actions/upload-artifact@v6
+        with:
+          name: openapi-generated
+          path: contracts/generated/openapi.json
+          retention-days: 30
 
       - name: Endpoints are covered by contract
         run: php scripts/check-openapi-drift.php

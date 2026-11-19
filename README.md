@@ -118,8 +118,10 @@ foundation/
 
 ## CI
 
-`.github/workflows/contracts.yml` линтует OpenAPI (Spectral) и сверяет снимок
-сгенерированной схемы с кодом — падает при расхождении контракта и реализации.
+`.github/workflows/contracts.yml` линтует OpenAPI (Spectral) и сверяет эндпоинты
+кода с ручным контрактом (`openapi.yaml`). При каждом прогоне job `drift`
+перегенерирует схему из Laravel и публикует актуальную версию как артефакт
+прогона `openapi-generated`.
 
 ## Статус
 
