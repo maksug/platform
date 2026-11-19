@@ -45,6 +45,12 @@ jobs:
       QUEUE_CONNECTION: sync
       DB_CONNECTION: sqlite
       DB_DATABASE: ':memory:'
+      # Анонимные запросы к api.github.com лимитированы 60/ч на IP, а раннеры
+      # Actions используют общие адреса -> HTTP 429 при скачивании dist-архивов.
+      # GITHUB_TOKEN поднимает лимит, композит применяет его к api/codeload.
+      COMPOSER_AUTH: '{"github-token": "${{ secrets.GITHUB_TOKEN }}"}'
+      # 10 параллельных загрузок по умолчанию — прямой путь к 429 на холодном кэше.
+      COMPOSER_MAX_PARALLEL_HTTP: "4"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -55,9 +61,29 @@ jobs:
           php-version: '8.4'
           coverage: none
 
+      - name: Composer cache directory
+        id: composer-cache
+        working-directory: services/core
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache composer downloads
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('services/core/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
       - name: Install dependencies
         working-directory: services/core
-        run: composer install --no-interaction --prefer-dist --no-progress
+        run: |
+          for attempt in 1 2 3; do
+            composer install --no-interaction --prefer-dist --no-progress && exit 0
+            if [ "$attempt" = 3 ]; then
+              exit 1
+            fi
+            echo "::warning::composer install failed (attempt $attempt), retrying in 30s"
+            sleep 30
+          done
 
       - name: Export OpenAPI from Laravel
         working-directory: services/core
