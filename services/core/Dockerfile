@@ -8,12 +8,12 @@ LABEL maintainer="dev"
 # Runtime-библиотеки (останутся в образе)
 RUN apk add --no-cache \
         bash git curl zip unzip openssh-client \
-        icu-libs libpq libzip oniguruma \
+        icu-libs libpq libzip oniguruma librdkafka \
         tini
 
 # Build-time зависимости (удаляются после компиляции расширений)
 RUN apk add --no-cache --virtual .build-deps \
-        icu-dev postgresql-dev libzip-dev oniguruma-dev \
+        icu-dev postgresql-dev libzip-dev oniguruma-dev librdkafka-dev \
         autoconf g++ make linux-headers
 
 # Встроенные PHP-расширения.
@@ -27,6 +27,11 @@ RUN docker-php-ext-install pdo_pgsql \
 # PECL-расширения (redis + xdebug)
 RUN pecl install redis xdebug \
     && docker-php-ext-enable redis xdebug
+
+# Kafka-клиент: отдельно, чтобы сбой сборки rdkafka не ломал слой redis/xdebug
+# и наоборот. Соберётся против librdkafka-dev из build-deps.
+RUN pecl install rdkafka \
+    && docker-php-ext-enable rdkafka
 
 # Удаляем только build-deps, runtime библиотеки остаются
 RUN apk del --no-network .build-deps \

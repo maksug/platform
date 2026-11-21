@@ -78,6 +78,20 @@ services:
     healthcheck:
       disable: true
 
+  # Консьюмер Kafka (php artisan kafka:consume). Профиль `workers`.
+  core-kafka-consumer:
+    <<: *core
+    profiles: ["workers"]
+    container_name: foundation-core-kafka-consumer
+    command: ["php", "artisan", "kafka:consume", "user-events"]
+    depends_on:
+      core:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
 volumes:
   core-vendor:
     name: foundation-core-vendor

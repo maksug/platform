@@ -109,11 +109,53 @@ services:
     restart: unless-stopped
     logging: *logging
 
+  # Kafka — брокер событий в режиме KRaft (без Zookeeper: cp-kafka 8.x его не поддерживает).
+  # Один узел совмещает broker и controller — достаточно для dev.
+  kafka:
+    image: confluentinc/cp-kafka:8.1.0
+    container_name: foundation-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      CLUSTER_ID: HeE59rmlFEq2hVdaMwskUQ
+      # INTERNAL — docker-сеть (kafka:9092), EXTERNAL — хост (localhost:9094),
+      # CONTROLLER — служебный listener KRaft, наружу не публикуется.
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    ports:
+      - "127.0.0.1:${KAFKA_PORT:-9094}:9094"
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    networks:
+      - foundation
+    restart: unless-stopped
+    healthcheck:
+      # В образе нет nc: проверка порта через bash /dev/tcp
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9092'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging: *logging
+
 volumes:
   pgdata:
     name: foundation-pgdata
   redisdata:
     name: foundation-redisdata
+  kafkadata:
+    name: foundation-kafkadata
 
 networks:
   foundation:

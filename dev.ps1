@@ -67,7 +67,7 @@ switch ($Cmd) {
         @'
 Dev commands:
   up                Поднять базовый стек (core, nginx, pg, redis, mailpit, adminer)
-  workers           Поднять core-queue + core-scheduler (профиль workers)
+  workers           Поднять воркеры: core-queue, core-scheduler, core-kafka-consumer (профиль workers)
   down              Остановить и удалить контейнеры
   ps                Состояние сервисов
   logs              Логи (по умолчанию все, можно: logs core)
@@ -90,7 +90,7 @@ Dev commands:
 '@
     }
     "up"      { Invoke-Compose @("up", "-d", "--build") }
-    "workers" { Invoke-Compose @("--profile", "workers", "up", "-d", "core-queue", "core-scheduler") }
+    "workers" { Invoke-Compose @("--profile", "workers", "up", "-d", "core-queue", "core-scheduler", "core-kafka-consumer") }
     "down"    { Invoke-Compose @("down") }
     "ps"      { Invoke-Compose @("ps") }
     "logs"    { if ($Rest) { Invoke-Compose (@("logs", "-f") + $Rest) } else { Invoke-Compose @("logs", "-f") } }

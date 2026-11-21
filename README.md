@@ -6,7 +6,7 @@ PostgreSQL + Redis) с контрактами и правилами репози
 каждый проект вырастает отсюда копией или `git subtree split`.
 
 - **Стек сервиса**: PHP 8.5, Laravel 13 (API-only), Sanctum 4, PostgreSQL 18, Redis 8.
-- **Стек платформы**: Docker Compose, nginx (php-fpm), Mailpit, Adminer.
+- **Стек платформы**: Docker Compose, nginx (php-fpm), Kafka 8.1 (KRaft), Mailpit, Adminer.
 - **Контракт**: OpenAPI в `contracts/openapi.yaml`.
 
 Документы для агентов и команд: [`agents.md`](agents.md) (корень),
@@ -17,7 +17,7 @@ PostgreSQL + Redis) с контрактами и правилами репози
 
 - Docker Desktop (Compose v2)
 - PowerShell (среда разработки — Windows; `make` не используется)
-- Свободные порты `8000`, `5433`, `8080`, `8025`
+- Свободные порты `8000`, `5433`, `9094`, `8080`, `8025`
 
 ⚠️ Контейнерная БД на `5433`, а не на `5432`: на хосте может стоять нативный
 PostgreSQL.
@@ -84,6 +84,7 @@ foundation/
 |---|---|---|
 | API (nginx) | `http://localhost:8000` | из локальной сети |
 | PostgreSQL | `127.0.0.1:5433` | только с хоста |
+| Kafka | `127.0.0.1:9094` | только с хоста; из контейнеров — `kafka:9092` |
 | Adminer | `http://127.0.0.1:8080` | только с хоста |
 | Mailpit | `http://127.0.0.1:8025` | только с хоста |
 | Redis | не публикуется | `docker compose -f infra/docker-compose.yml exec redis redis-cli` |
@@ -112,7 +113,7 @@ foundation/
 
 ## Данные и сброс
 
-Тома `foundation-pgdata` и `foundation-redisdata` переживают `down` без `-v`.
+Тома `foundation-pgdata`, `foundation-redisdata` и `foundation-kafkadata` переживают `down` без `-v`.
 Полный сброс — только `.\dev.ps1 clean`. Смена `POSTGRES_DB`/`POSTGRES_USER`
 после первой инициализации БД не переключит: том уже содержит старый кластер.
 

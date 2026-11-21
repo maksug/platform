@@ -93,9 +93,10 @@ git rm -r --cached services/core
 
 ## 🐳 Docker-платформа (infra/)
 
-- **`infra/docker-compose.yml`** — nginx, pg, redis, mailpit, adminer. Сервисы подключаются фрагментами через `include: ../services/core/compose.yml`.
+- **`infra/docker-compose.yml`** — nginx, pg, redis, kafka, mailpit, adminer. Сервисы подключаются фрагментами через `include: ../services/core/compose.yml`.
+- **Kafka** — режим KRaft (`cp-kafka:8.1.0`), один узел broker+controller, Zookeeper не нужен и не разворачивается.
 - **Связь**: `nginx` → `core` (php-fpm:9000) → БД/Redis; порядок старта через healthcheck-цепочки.
-- **Порты и тома платформы**: `pgdata` (`foundation-pgdata`), `redisdata` (`foundation-redisdata`); производные тома сервиса (`foundation-core-vendor`, `foundation-core-node-modules`, `foundation-core-composer-cache`) можно удалять без боли.
+- **Порты и тома платформы**: `pgdata` (`foundation-pgdata`), `redisdata` (`foundation-redisdata`), `kafkadata` (`foundation-kafkadata`); производные тома сервиса (`foundation-core-vendor`, `foundation-core-node-modules`, `foundation-core-composer-cache`) можно удалять без боли.
 - **Логи**: rotation 10 МБ × 3 файла на сервис.
 - **Рестарт**: приложение — `restart: "no"` (падение видно сразу), инфраструктура (pg/redis/nginx) — `unless-stopped`.
 - **Конфигурация — два файла, не один**: `infra/.env` (compose) и `services/core/.env` (Laravel). Проверка совпадения `DB_*`: `.\dev.ps1 env-check`.
@@ -115,6 +116,8 @@ git rm -r --cached services/core
 |---|---|---|
 | API (nginx) | `0.0.0.0:8000` | из сети (телефон и т.п.) |
 | PostgreSQL | `127.0.0.1:5433` | только с хоста ⚠️ не 5432! |
+| Kafka (EXTERNAL) | `127.0.0.1:9094` | только с хоста |
+| Kafka (INTERNAL) | `kafka:9092` | внутри docker-сети (core → kafka:9092) |
 | Adminer | `127.0.0.1:8080` | только с хоста |
 | Mailpit | `127.0.0.1:8025` | только с хоста |
 | Redis | не публикуется | `docker compose -f infra/docker-compose.yml exec redis redis-cli` |
@@ -122,7 +125,7 @@ git rm -r --cached services/core
 ⚠️ На машине пользователя стоит **нативный PostgreSQL 17** на порту 5432 (`C:\Program Files\PostgreSQL\17`) — конфликтовать с ним нельзя, контейнерная БД специально на 5433. Внутри docker-сети Laravel ходит на `pg:5432` как обычно.
 
 ## 💾 Хранение и сброс данных
-- `foundation-pgdata` (PG), `foundation-redisdata` (Redis) — **named volumes** Docker.
+- `foundation-pgdata` (PG), `foundation-redisdata` (Redis), `foundation-kafkadata` (Kafka) — **named volumes** Docker.
 - `foundation-core-vendor`, `foundation-core-node-modules`, `foundation-core-composer-cache` — производные артефакты.
 - Переживают `restart`, `rm`, `up`, `build`, `down` (без `-v`).
 - **Полный сброс**: только `.\dev.ps1 clean` (выполняет `down -v`) или ручное `docker volume rm`.
