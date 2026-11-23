@@ -1,0 +1,49 @@
+# ============================================================
+# Фронтенд portfolio (Vue 3 + TypeScript + Vite)
+# Фрагмент подключается в infra/docker-compose.yml через `include:`.
+# Профиль `frontend`: dev-сервер не входит в базовый стек, поднимается
+# командой .\dev.ps1 frontend.
+# ============================================================
+
+x-portfolio: &portfolio
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      NODE_VERSION: "${NODE_VERSION:-22}"
+  image: foundation/portfolio:dev
+  working_dir: /app
+  volumes:
+    - ./:/app
+    # node_modules — в Linux-томе: bind-mount с Windows для него непригоден
+    - portfolio-node-modules:/app/node_modules
+  networks:
+    - foundation
+  # В dev падение должно быть видно (Exited + логи), а не спрятано рестартом
+  restart: "no"
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  portfolio:
+    <<: *portfolio
+    profiles: ["frontend"]
+    container_name: foundation-portfolio
+    command: ["npm", "run", "dev"]
+    ports:
+      # Dev-сервер Vite. Как и API, публикуем на всех интерфейсах: вёрстку
+      # портфолио проверяют с телефона.
+      - "${PORTFOLIO_PORT:-5173}:5173"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  portfolio-node-modules:
+    name: foundation-portfolio-node-modules

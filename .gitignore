@@ -14,9 +14,10 @@
 /infra/.env
 /services/core/.env
 /services/core/.env.testing
-/frontend/.env
+/frontend/*/.env
 !**/.env.example
 !**/.env.testing.example
+
 
 # ---- Артефакты сервисов ----
 /services/core/vendor/
@@ -35,11 +36,12 @@
 /services/core/bootstrap/cache/*.php
 
 # ---- Артефакты фронтенда ----
-/frontend/node_modules/
-/frontend/dist/
-/frontend/.vite/
-/frontend/coverage/
-/frontend/*.tsbuildinfo
+/frontend/**/node_modules/
+/frontend/**/dist/
+/frontend/**/.vite/
+/frontend/**/coverage/
+/frontend/**/*.tsbuildinfo
+
 
 # ---- Тесты и линтеры ----
 .phpunit.result.cache

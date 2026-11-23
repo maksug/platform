@@ -1,0 +1,11 @@
+# Артефакты сборки
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# Окружение (не коммитится; шаблон — .env.example)
+.env
+.env.*
+!.env.example

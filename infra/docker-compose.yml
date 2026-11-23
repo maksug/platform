@@ -8,6 +8,7 @@ name: foundation
 
 include:
   - ../services/core/compose.yml
+  - ../frontend/portfolio/compose.yml
 
 x-logging: &logging
   driver: json-file

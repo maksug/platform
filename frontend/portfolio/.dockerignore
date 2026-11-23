@@ -1,0 +1,16 @@
+# Контекст сборки минимальный: зависимости ставятся по lock-файлу, а
+# node_modules/dist с хоста в образ попадают только как мусор.
+node_modules
+dist
+coverage
+.vite
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+.dockerignore
+README.md

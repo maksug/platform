@@ -26,9 +26,21 @@ $Compose  = Join-Path $Root "infra\docker-compose.yml"
 $InfraEnv = Join-Path $Root "infra\.env"
 $CoreEnv  = Join-Path $Root "services\core\.env"
 
+# Фронтенды (compose-профиль frontend). Новый фронтенд = имя сервиса сюда.
+$FeServices = @("portfolio")
+
 function Invoke-Compose {
     param([string[]]$ComposeArgs)
-    docker compose -f $Compose @ComposeArgs
+    # Docker пишет прогресс сборки в stderr. С ErrorActionPreference="Stop"
+    # PowerShell 5.1 превращает такую строку в terminating error и обрывает
+    # команду, поэтому на время вызова переключаемся в Continue.
+    $prevPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        docker compose -f $Compose @ComposeArgs
+    } finally {
+        $ErrorActionPreference = $prevPreference
+    }
 }
 
 # Сравнивает DB_* в infra/.env и services/core/.env: рассинхрон даёт
@@ -68,12 +80,14 @@ switch ($Cmd) {
 Dev commands:
   up                Поднять базовый стек (core, nginx, pg, redis, mailpit, adminer)
   workers           Поднять воркеры: core-queue, core-scheduler, core-kafka-consumer (профиль workers)
+  frontend          Поднять dev-серверы фронтендов (профиль frontend)
   down              Остановить и удалить контейнеры
   ps                Состояние сервисов
   logs              Логи (по умолчанию все, можно: logs core)
   sh                Зайти в shell контейнера core
   artisan           php artisan ...
   composer          composer ...
+  npm               npm во фронтенде: npm [service] [args...] (по умолчанию portfolio)
   test              Pest (можно фильтром: test --filter=Foo)
   lint              Проверка стиля без изменений (pint --test)
   pint              Автоисправление стиля (pint)
@@ -91,12 +105,28 @@ Dev commands:
     }
     "up"      { Invoke-Compose @("up", "-d", "--build") }
     "workers" { Invoke-Compose @("--profile", "workers", "up", "-d", "core-queue", "core-scheduler", "core-kafka-consumer") }
+    "frontend" {
+        # .\dev.ps1 frontend [service...] — dev-серверы фронтендов (профиль frontend)
+        Invoke-Compose (("--profile", "frontend", "up", "-d", "--build") + @($Rest))
+    }
     "down"    { Invoke-Compose @("down") }
     "ps"      { Invoke-Compose @("ps") }
     "logs"    { if ($Rest) { Invoke-Compose (@("logs", "-f") + $Rest) } else { Invoke-Compose @("logs", "-f") } }
     "sh"      { Invoke-Compose @("exec", "core", "sh") }
     "artisan" { Invoke-Compose (@("exec", "core", "php", "artisan") + $Rest) }
     "composer" { Invoke-Compose (@("exec", "core", "composer") + $Rest) }
+    "npm" {
+        # .\dev.ps1 npm [service] [args...] — npm внутри контейнера фронтенда.
+        # Первый аргумент считается именем фронтенда, только если он есть в
+        # $FeServices; иначе идёт в npm как есть.
+        $fe = $FeServices[0]
+        $npmArgs = if ($Rest) { @($Rest) } else { @() }
+        if ($npmArgs.Count -gt 0 -and $FeServices -contains $npmArgs[0]) {
+            $fe = $npmArgs[0]
+            $npmArgs = if ($npmArgs.Count -gt 1) { @($npmArgs[1..($npmArgs.Count - 1)]) } else { @() }
+        }
+        Invoke-Compose (@("exec", $fe, "npm") + $npmArgs)
+    }
     "test"    { Invoke-Compose (@("exec", "core", "./vendor/bin/pest") + $Rest) }
     "lint"    { Invoke-Compose @("exec", "core", "./vendor/bin/pint", "--test") }
     "pint"    { Invoke-Compose (@("exec", "core", "./vendor/bin/pint") + $Rest) }
